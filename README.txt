@@ -78,7 +78,7 @@ Power (P):
 	The default value is 2 for the Fitch-Margoliash method.  This option is not available for Neighbor or UPGMA (both assume Power = 0).  The above methods assume that the variance of the measurement error is proportional to the P-th power of the expectation.  If you have reason to think that the measurement error of a distance is the same for small distances as it is for large, then you should set P=0 and use the least squares method, but if you have reason to think that the relative (percentage) error is more nearly constant than the absolute error, you should use P=2, the Fitch-Margoliash method. In between, P=1 would be appropriate if the sizes of the errors were proportional to the square roots of the expected distance.
 
 Outgroup (O):
-	This specifies which species is to have the root of the tree be on the line leading to it.  It is not available in UPGMA or Kitsch.  When it is used, the tree is still listed as being an unrooted tree, though the outgroup is connected to the bottommost node so that is easy to visually convert the tree into rooted form.
+	This specifies which species is to have the root of the tree be on the line leading to it.  In the textbook type the accession number of the outgroup species.  It is not available in UPGMA or Kitsch.  When it is used, the tree is still listed as being an unrooted tree, though the outgroup is connected to the bottommost node so that is easy to visually convert the tree into rooted form.  SPECIFY THE ACCESSION NUMBER OF THE SPECIES TO BE USED AS THE OUTGROUP IN THE TEXTBOX.
 
 Retrieve Distances:
 	Creates distance matrix and draws trees using the selected options for selected sequences from the box on the left.
