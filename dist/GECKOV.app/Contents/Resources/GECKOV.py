@@ -470,17 +470,20 @@ class Database():
                             tmp.append(V.vector_distance(eval(v_dict[v1]), eval(v_dict[v2])))
                             distances[v2] = tmp       
                 done.append(v1)
-                    
+        print distances           
         file = open('infile', 'w')
         file.write(str(len(organisms_list[3])) + '\n')
         for org in organisms_list[3]:
             string = ""
+            print org
             for d in distances[org]:
                 d = "%.2f" %d
                 string += str(d) + ' '
             string.strip(' ')
             org = org.strip(' ')
-            file.write(org[:9] + ' '+ string + '\n')
+            if len(org) < 10:
+                org = org + (10-len(org))*' '
+            file.write(org[:9] + ' ' + string + '\n')
         file.close()
             
     def retrieve_distances(self, k, organisms_list, type, calculation, bool):

@@ -8,7 +8,7 @@ Usage:
 from setuptools import setup
 
 APP = ['GECKOV.py']
-DATA_FILES = ['neighbor', 'fitch','kitsch']
+DATA_FILES = ['neighbor', 'fitch','kitsch', 'forester.jar', '_aptx_configuration_file']
 OPTIONS = {'argv_emulation': True, 'iconfile':'dna_mag.icns'}
 
 setup(
