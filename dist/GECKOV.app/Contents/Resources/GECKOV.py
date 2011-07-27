@@ -80,18 +80,15 @@ class Database():
         return new_seq
     
     def js_range(self, seq1, seq2):
-        #Computes Jensen-Shannon Divergence for a range of kmers for k = 3 to k = 15
+        #Computes Jensen-Shannon Divergence for a range of kmers for k = 3 to k = 8
         F = Frequency()
         dist_list = []
-        for k in xrange(3,16):
+        for k in xrange(3,9):
             dist_list.append(F.jensen_shannon(F.frequency_profile(seq1,k)[1], F.frequency_profile(seq2,k)[1]))
         return dist_list
     
     def frag_seq(self, seq1, seq2):
-        frag = ""
-        i = 0
-        distances = []
-        result = []
+        frag, i, distances, result = "", 0, [], []
         for char in seq1:
             if i < len(seq2):
                 frag += char
@@ -104,9 +101,8 @@ class Database():
                 frag = ""
         dists = self.js_range(frag, seq2)
         distances.append(dists)
-        total = 0
-        sum = 0
-        for j in range(0,13):
+        total, sum = 0, 0
+        for j in range(0,6):
             for list in distances:
                 total += 1
                 sum += list[j]
@@ -128,7 +124,7 @@ class Database():
         v_list.append(moment_string)
         if type == False:
             sequence = str(Seq(sequence).translate())
-        for k in xrange(1,16):
+        for k in xrange(1,6):
             fp_list.append(V.frequency_profile(sequence, k))
         for profile in fp_list:
             nv = V.natural_vector(sequence, profile)
@@ -194,9 +190,9 @@ class Database():
         old_ids.extend(ids)
         connection = sqlite3.connect('distance.db')
         cursor = connection.cursor()
-        cursor.execute('''CREATE TABLE IF NOT EXISTS nt_js (id integer primary key, from_accession, to_accession, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen)''')
-        cursor.execute('''CREATE TABLE IF NOT EXISTS aa_js (id integer primary key, from_accession, to_accession, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen)''')
-        cursor.execute('''CREATE TABLE IF NOT EXISTS gen_js (id integer primary key, from_accession, to_accession, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen)''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS nt_js (id integer primary key, from_accession, to_accession, three, four, five, six, seven, eight)''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS aa_js (id integer primary key, from_accession, to_accession, three, four, five, six, seven, eight)''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS gen_js (id integer primary key, from_accession, to_accession, three, four, five, six, seven, eight)''')
         cursor.execute('''SELECT accession, nt_sequence FROM genomes''')
         
         for row in cursor:
@@ -205,21 +201,22 @@ class Database():
         nt_org_dict, aa_org_dict, gen_org_dict = {}, {}, {}
         num = 0
         total = len(sequences)*len(old_sequences)
+        dialog = wx.ProgressDialog("Jensen-Shannon Calculations", "Time Remaining", total, style=wx.PD_ELAPSED_TIME|wx.PD_REMAINING_TIME)
         for id1, seq1 in itertools.izip(ids, sequences):
             nt_dict, aa_dict, gen_dict = {}, {}, {}
-            print (num/total)*100.0
+            dialog.Update(num)
             aa_seq1 = str(Seq(seq1).translate())
             gen_seq1 = self.generalize_seq(seq1)
             for id2, seq2 in itertools.izip(old_ids, old_sequences):
                 num += 1
-                print (num/total)*100.0
+                dialog.Update(num)
                 aa_seq2 = str(Seq(seq2).translate())
                 gen_seq2 = self.generalize_seq(seq2)
                 if id2 not in nt_org_dict:
                     if id1 == id2:
-                        nt_dict[id2] = [0,0,0,0,0,0,0,0,0,0,0,0,0]
-                        aa_dict[id2] = [0,0,0,0,0,0,0,0,0,0,0,0,0]
-                        gen_dict[id2] = [0,0,0,0,0,0,0,0,0,0,0,0,0]
+                        nt_dict[id2] = [0,0,0,0,0,0]
+                        aa_dict[id2] = [0,0,0,0,0,0]
+                        gen_dict[id2] = [0,0,0,0,0,0]
                     else:
                         if len(seq1) > 3*len(seq2):
                             nt_dict[id2] = self.frag_seq(seq1, seq2)
@@ -240,45 +237,46 @@ class Database():
         for d1, d2, d3 in zip(nt_org_dict.iteritems(),aa_org_dict.iteritems(),gen_org_dict.iteritems()):
             org = d1[0]
             for dest, val in d1[1].iteritems():
-                a = org, dest, val[0], val[1], val[2], val[3], val[4], val[5], val[6], val[7], val[8], val[9], val[10], val[11], val[12]
-                cursor.execute('''INSERT INTO nt_js (id, from_accession, to_accession, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen) VALUES (NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',a)
+                a = org, dest, val[0], val[1], val[2], val[3], val[4], val[5]
+                cursor.execute('''INSERT INTO nt_js (id, from_accession, to_accession, three, four, five, six, seven, eight) VALUES (NULL,?,?,?,?,?,?,?,?)''',a)
             for dest, val in d2[1].iteritems():
-                a = org, dest, val[0], val[1], val[2], val[3], val[4], val[5], val[6], val[7], val[8], val[9], val[10], val[11], val[12]
-                cursor.execute('''INSERT INTO aa_js (id, from_accession, to_accession, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen) VALUES (NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',a)
+                a = org, dest, val[0], val[1], val[2], val[3], val[4], val[5]
+                cursor.execute('''INSERT INTO aa_js (id, from_accession, to_accession, three, four, five, six, seven, eight) VALUES (NULL,?,?,?,?,?,?,?,?)''',a)
             for dest, val in d3[1].iteritems():
-                a = org, dest, val[0], val[1], val[2], val[3], val[4], val[5], val[6], val[7], val[8], val[9], val[10], val[11], val[12]
-                cursor.execute('''INSERT INTO gen_js (id, from_accession, to_accession, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen) VALUES (NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',a)
+                a = org, dest, val[0], val[1], val[2], val[3], val[4], val[5]
+                cursor.execute('''INSERT INTO gen_js (id, from_accession, to_accession, three, four, five, six, seven, eight) VALUES (NULL,?,?,?,?,?,?,?,?)''',a)
         connection.commit()
-        print "Beginning Vector Calculations"
+        dialog.Destroy()
         
     def create_vector_tables(self, ids, sequences):
         #Import vectors and graphs into database
         old_ids, num =  [], 0
         connection = sqlite3.connect('distance.db')
         cursor = connection.cursor()
-        cursor.execute('''CREATE TABLE IF NOT EXISTS nt_vectors (id integer primary key, accession, ycoords, moment, one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen)''')
-        cursor.execute('''CREATE TABLE IF NOT EXISTS aa_vectors (id integer primary key, accession, ycoords, moment, one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen)''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS nt_vectors (id integer primary key, accession, ycoords, moment, one, two, three, four, five)''')
+        cursor.execute('''CREATE TABLE IF NOT EXISTS aa_vectors (id integer primary key, accession, ycoords, moment, one, two, three, four, five)''')
         cursor.execute('''SELECT accession FROM nt_vectors''')
         for row in cursor:
             old_ids.append(row[0])
+        dialog = wx.ProgressDialog("Vector Calculations", "Time Remaining", len(ids), style=wx.PD_ELAPSED_TIME|wx.PD_REMAINING_TIME)
         for id, sequence in itertools.izip(ids,sequences):
             num += 1
-            print num/len(ids)*100
+            dialog.Update(num)
             if id not in old_ids:
                 nt_vectors = self.vector_range(sequence, True)
                 aa_vectors = self.vector_range(sequence, False)
-                nt = id, nt_vectors[0], nt_vectors[1], nt_vectors[2], nt_vectors[3], nt_vectors[4], nt_vectors[5], nt_vectors[6], nt_vectors[7],\
-                 nt_vectors[8], nt_vectors[9], nt_vectors[10], nt_vectors[11], nt_vectors[12], nt_vectors[13], nt_vectors[14], nt_vectors[15], nt_vectors[16]
-                aa = id, aa_vectors[0], aa_vectors[1], aa_vectors[2], aa_vectors[3], aa_vectors[4], aa_vectors[5], aa_vectors[6], aa_vectors[7],\
-                 aa_vectors[8], aa_vectors[9], aa_vectors[10], aa_vectors[11], aa_vectors[12], aa_vectors[13], aa_vectors[14], aa_vectors[15], aa_vectors[16]
-                cursor.execute('''INSERT INTO nt_vectors (id, accession, ycoords, moment, one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen) VALUES (NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',nt)
-                cursor.execute('''INSERT INTO aa_vectors (id, accession, ycoords, moment, one, two, three, four, five, six, seven, eight, nine, ten, eleven, twelve, thirteen, fourteen, fifteen) VALUES (NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',aa)
+                nt = id, nt_vectors[0], nt_vectors[1], nt_vectors[2], nt_vectors[3], nt_vectors[4], nt_vectors[5], nt_vectors[6]
+                aa = id, aa_vectors[0], aa_vectors[1], aa_vectors[2], aa_vectors[3], aa_vectors[4], aa_vectors[5], aa_vectors[6]
+                cursor.execute('''INSERT INTO nt_vectors (id, accession, ycoords, moment, one, two, three, four, five) VALUES (NULL,?,?,?,?,?,?,?,?)''',nt)
+                cursor.execute('''INSERT INTO aa_vectors (id, accession, ycoords, moment, one, two, three, four, five) VALUES (NULL,?,?,?,?,?,?,?,?)''',aa)
         connection.commit()
-        print "Import Complete"
+        dialog.Destroy()
+        dialog = wx.MessageDialog(None, "%s sequences added to database" %num, "Import Complete",wx.OK)
+        dialog.ShowModal()
+        dialog.Destroy()
 
     def create_distance_tables(self, ids, sequences):
         #Calculate distances for frequency distribution calculations and store in database
-        print "Beginning Odds Calculations"
         F = Frequency()
         nt_org_dict, aa_org_dict, gen_org_dict = {}, {}, {}
         old_ids, old_sequences = [], []
@@ -305,14 +303,16 @@ class Database():
             old_ids.append(row[0])
             old_sequences.append(row[1])
         total = len(ids)*len(old_sequences)
+        
+        dialog = wx.ProgressDialog("K-mer Calculations", "Time Remaining", total, style=wx.PD_ELAPSED_TIME|wx.PD_REMAINING_TIME)
         for id1, seq1, in itertools.izip(ids, sequences):
             nt_dict, aa_dict, gen_dict = {}, {}, {}
             aa_seq1 = str(Seq(seq1).translate())
             gen_seq1 = self.generalize_seq(seq1)
-            print (num/total)*100.0
+            dialog.Update(num)
             for id2, seq2 in itertools.izip(old_ids, old_sequences):
                 num += 1
-                print (num/total)*100
+                dialog.Update(num)
                 aa_seq2 = str(Seq(seq2).translate())
                 gen_seq2 = self.generalize_seq(seq2)
                 if id2 not in nt_org_dict:
@@ -358,7 +358,7 @@ class Database():
                 cursor.execute('''INSERT INTO gen_odds_diff (id, from_accession, to_accession, di_dist, tri_dist, tet_dist, pent_dist) VALUES (NULL, ?, ?, ?, ?, ?, ?)''',c)
                 cursor.execute('''INSERT INTO gen_poisson (id, from_accession, to_accession, di_dist, tri_dist, tet_dist, pent_dist) VALUES (NULL, ?, ?, ?, ?, ?, ?)''',d)
         connection.commit()
-        print "Beginning Jensen-Shannon Calculations"
+        dialog.Destroy()
     
     def quick_calc(self, k, organisms_list, type, calculation):
         #Method to draw tree from FASTA file for ONE selected tree and calculation type quickly without importing sequences into database and computing
@@ -538,20 +538,6 @@ class Database():
                         cursor.execute('''SELECT from_accession, to_accession, seven FROM nt_js''')
                     elif k == 8:
                         cursor.execute('''SELECT from_accession, to_accession, eight FROM nt_js''')
-                    elif k == 9:
-                        cursor.execute('''SELECT from_accession, to_accession, nine FROM nt_js''')
-                    elif k == 10:
-                        cursor.execute('''SELECT from_accession, to_accession, ten FROM nt_js''')
-                    elif k == 11:
-                        cursor.execute('''SELECT from_accession, to_accession, eleven FROM nt_js''')
-                    elif k == 12:
-                        cursor.execute('''SELECT from_accession, to_accession, twelve FROM nt_js''')
-                    elif k == 13:
-                        cursor.execute('''SELECT from_accession, to_accession, thirteen FROM nt_js''')
-                    elif k == 14:
-                        cursor.execute('''SELECT from_accession, to_accession, fourteen FROM nt_js''')
-                    elif k == 15:
-                        cursor.execute('''SELECT from_accession, to_accession, fifteen FROM nt_js''')
             elif type == 'aminoacid':
                 if calculation == 'oddsratio':
                     if k == 2:
@@ -602,20 +588,6 @@ class Database():
                         cursor.execute('''SELECT from_accession, to_accession, seven FROM aa_js''')
                     elif k == 8:
                         cursor.execute('''SELECT from_accession, to_accession, eight FROM aa_js''')
-                    elif k == 9:
-                        cursor.execute('''SELECT from_accession, to_accession, nine FROM aa_js''')
-                    elif k == 10:
-                        cursor.execute('''SELECT from_accession, to_accession, ten FROM aa_js''')
-                    elif k == 11:
-                        cursor.execute('''SELECT from_accession, to_accession, eleven FROM aa_js''')
-                    elif k == 12:
-                        cursor.execute('''SELECT from_accession, to_accession, twelve FROM aa_js''')
-                    elif k == 13:
-                        cursor.execute('''SELECT from_accession, to_accession, thirteen FROM aa_js''')
-                    elif k == 14:
-                        cursor.execute('''SELECT from_accession, to_accession, fourteen FROM aa_js''')
-                    elif k == 15:
-                        cursor.execute('''SELECT from_accession, to_accession, fifteen FROM aa_js''')
             elif type == 'generalized':
                 if calculation == 'oddsratio':
                     if k == 2:
@@ -665,23 +637,8 @@ class Database():
                     elif k == 7:
                         cursor.execute('''SELECT from_accession, to_accession, seven FROM gen_js''')
                     elif k == 8:
-                        cursor.execute('''SELECT from_accession, to_accession, eight FROM gen_js''')
-                    elif k == 9:
-                        cursor.execute('''SELECT from_accession, to_accession, nine FROM gen_js''')
-                    elif k == 10:
-                        cursor.execute('''SELECT from_accession, to_accession, ten FROM gen_js''')
-                    elif k == 11:
-                        cursor.execute('''SELECT from_accession, to_accession, eleven FROM gen_js''')
-                    elif k == 12:
-                        cursor.execute('''SELECT from_accession, to_accession, twelve FROM gen_js''')
-                    elif k == 13:
-                        cursor.execute('''SELECT from_accession, to_accession, thirteen FROM gen_js''')
-                    elif k == 14:
-                        cursor.execute('''SELECT from_accession, to_accession, fourteen FROM gen_js''')
-                    elif k == 15:
-                        cursor.execute('''SELECT from_accession, to_accession, fifteen FROM gen_js''')    
-            distances = {}
-            id_list, start, dest, dist = [], [], [], []
+                        cursor.execute('''SELECT from_accession, to_accession, eight FROM gen_js''')   
+            id_list, start, dest, dist, distances = [], [], [], [], {}
             for row in cursor:
                 start.append(row[0])
                 dest.append(row[1])
@@ -718,7 +675,6 @@ class Database():
                         string = string + '\n'
                         file.write(string)
                         num += 1
-                print "Distance Matrix Complete"
             else:
                 return id_list, distances
         else:
@@ -736,26 +692,6 @@ class Database():
                         cursor.execute('''SELECT accession, four FROM nt_vectors''')
                     elif k == 5:
                         cursor.execute('''SELECT accession, five FROM nt_vectors''')
-                    elif k == 6:
-                        cursor.execute('''SELECT accession, six FROM nt_vectors''')
-                    elif k == 7:
-                        cursor.execute('''SELECT accession, seven FROM nt_vectors''')
-                    elif k == 8:
-                        cursor.execute('''SELECT accession, eight FROM nt_vectors''')
-                    elif k == 9:
-                        cursor.execute('''SELECT accession, nine FROM nt_vectors''')
-                    elif k == 10:
-                        cursor.execute('''SELECT accession, ten FROM nt_vectors''')
-                    elif k == 11:
-                        cursor.execute('''SELECT accession, eleven FROM nt_vectors''')
-                    elif k == 12:
-                        cursor.execute('''SELECT accession, twelve FROM nt_vectors''')
-                    elif k == 13:
-                        cursor.execute('''SELECT accession, thirteen FROM nt_vectors''')
-                    elif k == 14:
-                        cursor.execute('''SELECT accession, fourteen FROM nt_vectors''')
-                    elif k == 15:
-                        cursor.execute('''SELECT accession, fifteen FROM nt_vectors''')
             elif type == 'aminoacid':
                 if calculation == 'moment':
                     cursor.execute('''SELECT accession, moment FROM aa_vectors''')
@@ -770,26 +706,6 @@ class Database():
                         cursor.execute('''SELECT accession, four FROM aa_vectors''')
                     elif k == 5:
                         cursor.execute('''SELECT accession, five FROM aa_vectors''')
-                    elif k == 6:
-                        cursor.execute('''SELECT accession, six FROM aa_vectors''')
-                    elif k == 7:
-                        cursor.execute('''SELECT accession, seven FROM aa_vectors''')
-                    elif k == 8:
-                        cursor.execute('''SELECT accession, eight FROM aa_vectors''')
-                    elif k == 9:
-                        cursor.execute('''SELECT accession, nine FROM aa_vectors''')
-                    elif k == 10:
-                        cursor.execute('''SELECT accession, ten FROM aa_vectors''')
-                    elif k == 11:
-                        cursor.execute('''SELECT accession, eleven FROM aa_vectors''')
-                    elif k == 12:
-                        cursor.execute('''SELECT accession, twelve FROM aa_vectors''')
-                    elif k == 13:
-                        cursor.execute('''SELECT accession, thirteen FROM aa_vectors''')
-                    elif k == 14:
-                        cursor.execute('''SELECT accession, fourteen FROM aa_vectors''')
-                    elif k == 15:
-                        cursor.execute('''SELECT accession, fifteen FROM aa_vectors''')
             vector_dict, distances = {}, {}
             id_list, start, dest, dist, done = [], [], [], [], []
             V = gs.Vectors()
@@ -837,7 +753,6 @@ class Database():
                         string = string + '\n'
                         file.write(string)
                         num += 1
-                print "Distance Matrix Complete"
             else:
                 return id_list, distances
     
@@ -915,12 +830,8 @@ class Frequency():
         sc = sum([v/psum for v in p.itervalues()])
         st = sum([v/qsum for v in q.itervalues()])
         if sc < 9e-6:
-            print "Sum P: %e, Sum Q: %e" % (sc, st)
-            print "*** ERROR: sc does not sum up to 1. Bailing out .."
             sys.exit(2)
         if st < 9e-6:
-            print "Sum P: %e, Sum Q: %e" % (sc, st)
-            print "*** ERROR: st does not sum up to 1. Bailing out .."
             sys.exit(2)
 
         div = 0
@@ -1341,7 +1252,7 @@ class MainFrame(wx.Frame):
         #Set appropriate ranges when Jensen-Shannon radio button selected
         if not self.gen_button.Enabled:
             self.gen_button.Enable()
-        self.spin.SetRange(3,15)
+        self.spin.SetRange(3,8)
         self.spin.SetValue(3)
         self.Update()  
     def select_mv(self, event):
@@ -1357,7 +1268,7 @@ class MainFrame(wx.Frame):
         self.dimension_spin.SetRange(2,25)
         if self.gen_button.Enabled:
             self.gen_button.Disable()
-        self.spin.SetRange(1,15)
+        self.spin.SetRange(1,5)
         self.spin.SetValue(1)
         self.Update()
     def select_other(self, event):
@@ -1659,7 +1570,7 @@ class FastMap:
     def _map(self, K): 
         if K==0: return 
         px,py=self._pickPivot()
-        if self.verbose: print "Picked %d,%d at K=%d"%(px,py,K)
+        if self.verbose: pass
         if self._dist(px,py,self.col)==0: 
             return 
         for i in range(len(self.dist)):
